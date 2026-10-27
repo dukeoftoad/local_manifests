@@ -70,10 +70,22 @@ jobs:
           curl -sL "$LOCAL_MANIFEST_URL?cb=$(date +%s)" -o .repo/local_manifests/veux.xml
           cat .repo/local_manifests/veux.xml
 
-      - name: repo sync
+      - name: repo sync (retry-hardened)
         run: |
           cd "$WORKDIR"
-          repo sync -c -j8 --no-clone-bundle --no-tags --fail-fast || repo sync -c -j4 --no-clone-bundle --no-tags
+          SYNC_OK=0
+          for attempt in 1 2 3; do
+            if repo sync -c -j8 --no-clone-bundle --no-tags --fail-fast; then
+              SYNC_OK=1
+              break
+            fi
+            echo "::warning::repo sync attempt ${attempt} failed (exit $?)"
+            sleep 90
+          done
+          if [ "$SYNC_OK" -ne 1 ]; then
+            echo "falling back to low-parallelism sync"
+            repo sync -c -j4 --no-clone-bundle --no-tags
+          fi
           df -h
 
       - name: Build ROM (voltage_veux userdebug, security patch 2026-10-01)
