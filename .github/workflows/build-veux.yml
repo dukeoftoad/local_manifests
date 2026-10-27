@@ -1,4 +1,4 @@
-name: Build VoltageOS 6.2 (A16 QPR2) for veux
+name: Build VoltageOS 5.11-EOL (A16 QPR2) for veux
 
 on:
   workflow_dispatch:
