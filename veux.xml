@@ -17,6 +17,9 @@
   <!-- Dolby Audio Effects -->
   <project path="vendor/oneplus/dolby" name="vendor_oneplus_dolby" remote="dukeoftoad" revision="main" />
 
+  <!-- Canvas app (6.x feature backport, A16-patched) -->
+  <project path="packages/apps/Canvas" name="packages_apps_Canvas" remote="dukeoftoad" revision="sixteen-qpr2" />
+
   <!-- Lineage sepolicy (libperfmgr) required by veux BoardConfig
        (uses the manifest's own LineageOS remote: fetch=https://github.com/, rev lineage-23.2) -->
   <project path="device/lineage/sepolicy" name="LineageOS/android_device_lineage_sepolicy" remote="LineageOS" revision="lineage-23.2" />
