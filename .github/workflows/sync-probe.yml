@@ -1,0 +1,94 @@
+name: Sync Probe (disk telemetry for veux build)
+
+on:
+  workflow_dispatch:
+
+env:
+  MANIFEST_URL: 'https://github.com/VoltageOS/manifest'
+  MANIFEST_BRANCH: '16.2'
+  LOCAL_MANIFEST_URL: 'https://raw.githubusercontent.com/dukeoftoad/local_manifests/main/veux.xml'
+  DEVICE: 'veux'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Maximize build space
+        run: |
+          echo "Before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+                      /opt/hostedtoolcache/CodeQL /usr/local/lib/android \
+                      /usr/local/share/boost /usr/lib/jvm
+          sudo docker image prune --all --force || true
+          sudo apt-get clean
+          echo "After cleanup:"
+          df -h
+
+      - name: Work directory
+        run: |
+          echo "WORKDIR=$HOME/rom" >> $GITHUB_ENV
+          mkdir -p "$HOME/rom"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git gnupg flex bison gperf build-essential zip curl \
+            zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses-dev \
+            libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig \
+            bc libssl-dev libncurses-dev imagemagick python3 git-lfs lzop libxml2 rsync
+          sudo curl -s https://storage.googleapis.com/git-repo-downloads/repo -o /usr/local/bin/repo
+          sudo chmod a+x /usr/local/bin/repo
+          git lfs install
+          git config --global user.name "dukeoftoad"
+          git config --global user.email "dukeoftoad@users.noreply.github.com"
+          git config --global color.ui false
+
+      - name: repo init + local manifest
+        run: |
+          cd "$WORKDIR"
+          repo init -u "$MANIFEST_URL" -b "$MANIFEST_BRANCH" --depth=1 --git-lfs
+          mkdir -p .repo/local_manifests
+          curl -sL "$LOCAL_MANIFEST_URL?cb=$(date +%s)" -o .repo/local_manifests/veux.xml
+          cat .repo/local_manifests/veux.xml
+          echo "=== disk after init ==="
+          df -h /
+
+      - name: repo sync probe (30s disk telemetry, 50min cap)
+        id: sync
+        continue-on-error: true
+        run: |
+          cd "$WORKDIR"
+          (
+            while true; do
+              A=$(df -B1 --output=avail / 2>/dev/null | tail -1 | tr -dc '0-9')
+              R=$(du -sb .repo 2>/dev/null | cut -f1)
+              I=$(df --output=iavail / 2>/dev/null | tail -1 | tr -dc '0-9')
+              echo "[probe] t=$(date -u +%H:%M:%S) avail_bytes=${A:-NA} repo_bytes=${R:-NA} inodes_free=${I:-NA}"
+              sleep 30
+            done
+          ) &
+          TELPID=$!
+          set +e
+          timeout 3000 repo sync -c -j8 --no-clone-bundle --no-tags --fail-fast 2>&1
+          SYNC_RC=$?
+          set -e
+          kill $TELPID 2>/dev/null || true
+          echo "SYNC_EXIT_CODE=$SYNC_RC"
+          echo "sync_exit=$SYNC_RC" >> "$GITHUB_OUTPUT"
+
+      - name: Size breakdown (always)
+        if: always()
+        run: |
+          cd "$WORKDIR"
+          echo "=== df ==="
+          df -h /
+          echo "=== .repo total ==="
+          du -sh .repo 2>/dev/null || true
+          echo "=== top-level dirs by size, MB (largest 25) ==="
+          du -xsm --max-depth=1 . 2>/dev/null | sort -rn | head -25
+          echo "=== biggest bare repos in .repo/projects (25), MB ==="
+          du -sm .repo/projects/* 2>/dev/null | sort -rn | head -25
+          echo "=== inode usage ==="
+          df -i / | tail -1
