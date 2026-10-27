@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
   <remote name="dukeoftoad" fetch="https://github.com/dukeoftoad" />
-  <remote name="LineageOS" fetch="https://github.com/LineageOS" />
 
   <!-- Device tree: VoltageOS 6.2 (Android 17) continuation -->
   <project path="device/xiaomi/veux" name="device_xiaomi_veux" remote="dukeoftoad" revision="seventeen" />
@@ -18,6 +17,7 @@
   <!-- Dolby Audio Effects -->
   <project path="vendor/oneplus/dolby" name="vendor_oneplus_dolby" remote="dukeoftoad" revision="main" />
 
-  <!-- Lineage sepolicy (libion / libperfmgr) required by veux BoardConfig -->
-  <project path="device/lineage/sepolicy" name="android_device_lineage_sepolicy" remote="LineageOS" revision="lineage-24.0" />
+  <!-- Lineage sepolicy (libion / libperfmgr) required by veux BoardConfig
+       (uses the manifest's own LineageOS remote: fetch=https://github.com/, rev lineage-24.0) -->
+  <project path="device/lineage/sepolicy" name="LineageOS/android_device_lineage_sepolicy" remote="LineageOS" revision="lineage-24.0" />
 </manifest>
