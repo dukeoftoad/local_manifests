@@ -1,8 +1,16 @@
-name: Build VoltageOS 5.11-EOL (A16 QPR2) for veux
+name: Build VoltageOS for veux
 
 on:
   workflow_dispatch:
     inputs:
+      variant:
+        description: 'VoltageOS variant'
+        required: true
+        default: '6.2-A17'
+        type: choice
+        options:
+          - '6.2-A17'
+          - '5.11-EOL-A16'
       device:
         description: 'Device codename'
         required: true
@@ -10,8 +18,6 @@ on:
 
 env:
   MANIFEST_URL: 'https://github.com/VoltageOS/manifest'
-  MANIFEST_BRANCH: '16.2'
-  LOCAL_MANIFEST_URL: 'https://raw.githubusercontent.com/dukeoftoad/local_manifests/main/veux.xml'
   DEVICE: 'veux'
 
 jobs:
@@ -38,6 +44,19 @@ jobs:
           if [ "$MNT_AVAIL" -gt "$ROOT_AVAIL" ]; then WORKDIR=/mnt/rom; else WORKDIR=$HOME/rom; fi
           echo "WORKDIR=$WORKDIR" >> $GITHUB_ENV
           sudo mkdir -p "$WORKDIR" && sudo chown -R $USER:$USER "$WORKDIR"
+
+      - name: Resolve variant
+        run: |
+          if [ "${{ github.event.inputs.variant }}" = "5.11-EOL-A16" ]; then
+            echo "MANIFEST_BRANCH=16.2" >> "$GITHUB_ENV"
+            echo "LOCAL_MANIFEST_URL=https://raw.githubusercontent.com/dukeoftoad/local_manifests/main/veux.xml" >> "$GITHUB_ENV"
+            echo "VARIANT_TAG=a16qpr2-5.11eol" >> "$GITHUB_ENV"
+          else
+            echo "MANIFEST_BRANCH=17" >> "$GITHUB_ENV"
+            echo "LOCAL_MANIFEST_URL=https://raw.githubusercontent.com/dukeoftoad/local_manifests/main/veux-17.xml" >> "$GITHUB_ENV"
+            echo "VARIANT_TAG=a17-6.2" >> "$GITHUB_ENV"
+          fi
+          echo "Resolved variant: ${{ github.event.inputs.variant }}"
 
       - name: Add 16G swap
         run: |
@@ -97,7 +116,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: veux-voltageos-a16qpr2-run${{ github.run_number }}
+          name: veux-${{ env.VARIANT_TAG }}-run${{ github.run_number }}
           path: artifacts/*
           retention-days: 7
           if-no-files-found: warn
