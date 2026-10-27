@@ -1,0 +1,34 @@
+name: Runner Disk Check
+
+# Purpose: measure the REAL disk/RAM of a GitHub-hosted runner shape
+# before committing to paid builds.
+#
+# For the paid "larger runner" option you must FIRST (one-time, repo owner):
+#   1. Settings -> Billing -> enable spending limit for Actions
+#   2. Settings -> Actions -> Runners -> New runner -> pick "ubuntu-24.04-large"
+# Then dispatch this workflow; it prints the exact free disk + RAM.
+# If you dispatch it without configuring the larger runner it will queue forever.
+
+on:
+  workflow_dispatch:
+    inputs:
+      shape:
+        description: 'Runner label to measure'
+        required: false
+        default: 'ubuntu-24.04-large'
+
+jobs:
+  measure:
+    runs-on: ${{ github.event.inputs.shape || 'ubuntu-24.04-large' }}
+    timeout-minutes: 5
+    steps:
+      - name: Report disk and RAM
+        run: |
+          echo "=== df -h (all filesystems) ==="
+          df -h
+          echo "=== RAM ==="
+          free -h
+          echo "=== CPU ==="
+          nproc
+          lscpu | grep "Model name" || true
+          echo "VERDICT: compare the largest 'Avail' value against the VoltageOS requirement (~150-180GB total for sync+build)"
