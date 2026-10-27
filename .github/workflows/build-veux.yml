@@ -85,7 +85,7 @@ jobs:
           cd "$WORKDIR"
           repo init -u "$MANIFEST_URL" -b "$MANIFEST_BRANCH" --depth=1 --git-lfs
           mkdir -p .repo/local_manifests
-          curl -sL "$LOCAL_MANIFEST_URL" -o .repo/local_manifests/veux.xml
+          curl -sL "$LOCAL_MANIFEST_URL?cb=$(date +%s)" -o .repo/local_manifests/veux.xml
           cat .repo/local_manifests/veux.xml
 
       - name: repo sync
